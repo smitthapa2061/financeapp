@@ -117,21 +117,19 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
 
   // Totals calculation (grand)
   const grandTotals = filteredTeams.reduce(
-    (totals, team) => {
-      team.bookings.forEach((b) => {
-        totals.entryFee += b.entryFee || 0;
-        totals.winning += b.winning || 0;
-      
-      });
-      return totals;
-    },
-    {
-      entryFee: 0,
-      winning: 0,
-      casterCost: 0,
-      productionCost: 0,
-    }
-  );
+  (totals, team) => {
+    team.bookings.forEach((b) => {
+      const entry = b.entryFee || 0;
+      const win = b.winning || 0;
+      totals.entryFee += entry;
+      totals.winning += win;
+      totals.netTotal += entry - win;
+    });
+    return totals;
+  },
+  { entryFee: 0, winning: 0, netTotal: 0 } // ← make sure this initializer is present
+);
+
 
   const thTdStyleLeft = {
     padding: "8px",
@@ -186,7 +184,7 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
         >
           <span >Total Entry Fee: Rs {Math.round(grandTotals.entryFee)}</span>
           <span className="ml-[200px]">Total Winning: Rs {Math.round(grandTotals.winning)}</span>
-         
+            <span className="ml-[200px]">Total profit: Rs {Math.round(grandTotals.netTotal)}</span>
          <p><strong>Today's Profit:</strong> Rs {todayProfit}</p>
   <p><strong>Last 7 Days Profit:</strong> Rs {weekProfit}</p>
    <p><strong>30 Days Profit:</strong> Rs {monthProfit}</p>
