@@ -24,12 +24,14 @@ export default function DisplayBookings({
 
   if (!teams) return <p>Loading teams...</p>;
 
-  const filteredTeams = teams
-    .filter(
-      (team) =>
-        team.teamName &&
-        team.teamName.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+const filteredTeams = teams.filter((team) => {
+  const lowerSearch = searchTerm.toLowerCase();
+  const matchTeamName = team.teamName?.toLowerCase().includes(lowerSearch);
+  const matchCaster = team.bookings?.some(
+    (b) => b.caster?.toLowerCase().includes(lowerSearch)
+  );
+  return matchTeamName || matchCaster;
+})
     .sort((a, b) => {
       const totalA = a.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
       const totalB = b.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
@@ -277,7 +279,9 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                         Description
                       </th>
                    
-                  
+                   <th style={{ padding: "10px", textAlign: "left" }}>
+                        Booked by
+                      </th>
                
                     
                       <th style={{ padding: "10px", textAlign: "center" }}>
@@ -354,6 +358,15 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                                 style={{ width: "100%" }}
                               />
                             </td>
+                            <td style={thTdStyleLeft}>
+                              <input
+                                type="text"
+                                name="caster"
+                                value={bookingForm.discription}
+                                onChange={handleChange}
+                                style={{ width: "100%" }}
+                              />
+                            </td>
                           
                             <td style={{ textAlign: "center" }}>
                               <button
@@ -408,7 +421,7 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                             Rs {Math.round(b.winning)}
                           </td>
                           <td style={thTdStyleLeft}>{b.discription}</td>
-                         
+                          <td style={thTdStyleLeft}>{b.caster}</td>
                           <td style={{ textAlign: "center" }}>
                             <button
                               style={{

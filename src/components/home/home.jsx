@@ -315,51 +315,17 @@ export default function TeamSelector() {
                     />
                   </div>
                   <div>
-                    <label>EVENT CASTER</label>
+                    <label>BOOKED BY</label>
                     <input
                       className="border-2 border-black w-full p-2"
                       type="text"
                       name="caster"
-                      placeholder="Caster"
+                      placeholder=""
                       value={booking.caster}
                       onChange={handleInputChange}
                     />
                   </div>
-                  <div>
-                    <label>CASTER AMOUNT</label>
-                    <input
-                      className="border-2 border-black w-full p-2"
-                      type="number"
-                      name="casterCost"
-                      placeholder="Caster Cost"
-                      value={booking.casterCost}
-                      onChange={handleInputChange}
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label>PRODUCTION</label>
-                    <input
-                      className="border-2 border-black w-full p-2"
-                      type="text"
-                      name="production"
-                      placeholder="Production"
-                      value={booking.production}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label>PRODUCTION AMOUNT</label>
-                    <input
-                      className="border-2 border-black w-full p-2"
-                      type="number"
-                      name="productionCost"
-                      placeholder="Production Cost"
-                      value={booking.productionCost}
-                      onChange={handleInputChange}
-                      min="0"
-                    />
-                  </div>
+               
                 </div>
 
                 <button
