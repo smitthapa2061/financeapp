@@ -362,7 +362,7 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                               <input
                                 type="text"
                                 name="caster"
-                                value={bookingForm.discription}
+                                value={bookingForm.caster}
                                 onChange={handleChange}
                                 style={{ width: "100%" }}
                               />
