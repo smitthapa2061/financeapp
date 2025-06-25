@@ -30,21 +30,22 @@ const filteredTeams = teams
   .map(team => {
     const matchTeamName = team.teamName?.toLowerCase().includes(lowerSearch);
 
-    // Filter bookings that match caster or date
-    const filteredBookings = team.bookings?.filter(b => {
+    // Check if any booking's caster or date matches
+    const bookingMatch = team.bookings?.some(b => {
       const matchCaster = b.caster?.toLowerCase().includes(lowerSearch);
       const matchDate = b.date?.toLowerCase().includes(lowerSearch);
       return matchCaster || matchDate;
-    }) || [];
+    });
 
-    // If team name matches, keep all bookings, else only filtered ones
-    if (matchTeamName) {
+    if (matchTeamName || bookingMatch) {
+      // Return entire team with all bookings if either teamName or any booking matches
       return { ...team };
-    } else if (filteredBookings.length > 0) {
-      return { ...team, bookings: filteredBookings };
     }
-    return null; // no match
+
+    return null; // No match
   })
+  
+
   .filter(Boolean)
     .sort((a, b) => {
       const totalA = a.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
