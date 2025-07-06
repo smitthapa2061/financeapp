@@ -27,7 +27,7 @@ export default function TeamSelector() {
   const fetchTeams = async () => {
     try {
       const res = await axios.get(
-        "https://hisab-backend-hu8f.onrender.com/api/bookingData"
+        "https://backendhisab.onrender.com/api/bookingData"
       );
       setTeams(res.data);
     } catch {
@@ -54,7 +54,7 @@ export default function TeamSelector() {
   ) => {
     try {
       await axios.put(
-        `https://hisab-backend-hu8f.onrender.com/api/bookingData/${teamName}/bookings/${bookingIndex}`,
+        `https://backendhisab.onrender.com/api/bookingData/${teamName}/bookings/${bookingIndex}`,
         updatedBooking
       );
       setMessage("Booking updated successfully");
@@ -69,7 +69,7 @@ export default function TeamSelector() {
       return;
     try {
       await axios.delete(
-        `https://hisab-backend-hu8f.onrender.com/api/bookingData/${teamName}/bookings/${bookingIndex}`
+        `https://backendhisab.onrender.com/api/bookingData/${teamName}/bookings/${bookingIndex}`
       );
       setMessage("Booking deleted successfully");
       await fetchTeams();
@@ -78,26 +78,40 @@ export default function TeamSelector() {
     }
   };
 
-  const handleDeleteTeam = async (teamName) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete team "${teamName}" and all its bookings?`
-      )
-    )
-      return;
+ // Retry once if no response
+const handleDeleteTeam = async (teamName) => {
+  if (!window.confirm(`Are you sure you want to delete team "${teamName}" and all its bookings?`)) return;
 
-    try {
-      await axios.delete(
-        `https://hisab-backend-hu8f.onrender.com/api/bookingData/${teamName}`
-      );
-      setMessage(`Team "${teamName}" deleted successfully.`);
-      await fetchTeams();
-      // Also remove from selectedTeams if selected
-      setSelectedTeams((prev) => prev.filter((t) => t !== teamName));
-    } catch (error) {
-      setMessage("Failed to delete team: " + error.message);
+  const encodedName = encodeURIComponent(teamName);
+  const url = `https://backendhisab.onrender.com/api/bookingData/${encodedName}`;
+
+  try {
+    await axios.delete(url);
+    setMessage(`Team "${teamName}" deleted successfully.`);
+    await fetchTeams();
+    setSelectedTeams((prev) => prev.filter((t) => t !== teamName));
+  } catch (error) {
+    if (error.request && !error.response) {
+      // Retry once after 1 second
+      try {
+        await new Promise((res) => setTimeout(res, 1000));
+        await axios.delete(url);
+        setMessage(`Team "${teamName}" deleted successfully (after retry).`);
+        await fetchTeams();
+        setSelectedTeams((prev) => prev.filter((t) => t !== teamName));
+        return;
+      } catch (retryError) {
+        setMessage("Still failed after retry: " + retryError.message);
+        console.error("Retry error:", retryError);
+      }
+    } else if (error.response) {
+      setMessage(`Failed: ${error.response.status} - ${error.response.data.message || "Server error"}`);
+    } else {
+      setMessage("Unexpected error: " + error.message);
     }
-  };
+  }
+};
+
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -114,7 +128,7 @@ export default function TeamSelector() {
     }
     try {
       const res = await axios.post(
-        "https://hisab-backend-hu8f.onrender.com/api/bookingData",
+        "https://backendhisab.onrender.com/api/bookingData",
         {
           teamName: newTeamName,
           bookings: [],
@@ -141,7 +155,7 @@ export default function TeamSelector() {
       await Promise.all(
         selectedTeams.map((teamName) =>
           axios.post(
-            `https://hisab-backend-hu8f.onrender.com/api/bookingData/${teamName}/bookings`,
+            `https://backendhisab.onrender.com/api/bookingData/${teamName}/bookings`,
             booking
           )
         )
