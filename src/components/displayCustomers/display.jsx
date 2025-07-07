@@ -28,23 +28,27 @@ const lowerSearch = searchTerm.toLowerCase().trim();
 
 const filteredTeams = teams
   .map(team => {
-    const matchTeamName = team.teamName?.toLowerCase().includes(lowerSearch);
+    const matchTeamName = team.teamName?.toLowerCase().trim() === lowerSearch;
 
-    // Check if any booking's caster or date matches
-    const bookingMatch = team.bookings?.some(b => {
-      const matchCaster = b.caster?.toLowerCase().includes(lowerSearch);
-      const matchDate = b.date?.toLowerCase().includes(lowerSearch);
-      return matchCaster || matchDate;
-    });
+    const matchedBookings = team.bookings?.filter(b => {
+      const matchDate = b.date?.toLowerCase().trim() === lowerSearch;
+      const matchCaster = b.caster?.toLowerCase().trim() === lowerSearch;
+      return matchDate || matchCaster;
+    }) || [];
 
-    if (matchTeamName || bookingMatch) {
-      // Return entire team with all bookings if either teamName or any booking matches
-      return { ...team };
+    if (matchTeamName || matchedBookings.length > 0) {
+      return {
+        ...team,
+        bookings: matchTeamName ? team.bookings : matchedBookings, // if team name matched, show all bookings
+      };
     }
 
-    return null; // No match
+    return null;
   })
-  
+ 
+
+
+
 
   .filter(Boolean)
     .sort((a, b) => {
