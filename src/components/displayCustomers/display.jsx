@@ -36,16 +36,24 @@ const filteredTeams = teams
       return matchDate || matchCaster;
     }) || [];
 
-    if (matchTeamName || matchedBookings.length > 0) {
+    const matchCaster = matchedBookings.some(b => b.caster?.toLowerCase().trim() === lowerSearch);
+
+    if (matchTeamName || matchCaster) {
       return {
         ...team,
-        bookings: matchTeamName ? team.bookings : matchedBookings, // if team name matched, show all bookings
+        bookings: team.bookings, // show all bookings
+      };
+    }
+
+    if (matchedBookings.length > 0) {
+      return {
+        ...team,
+        bookings: matchedBookings, // show filtered bookings
       };
     }
 
     return null;
   })
- 
 
 
 
