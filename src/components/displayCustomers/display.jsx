@@ -139,11 +139,6 @@ const oneMonthAgo = new Date();
 oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 oneMonthAgo.setHours(0, 0, 0, 0);
 
-// Calculate profits
-const todayProfit = getProfitForRange(today, tomorrow);
-const weekProfit = getProfitForRange(sevenDaysAgo, new Date());
-const monthProfit = getProfitForRange(oneMonthAgo, new Date());
-
 
 
   // Totals calculation (grand)
@@ -237,10 +232,16 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
             (sum, b) => sum + (b.casterCost || 0),
             0
           );
-          const totalProductionCost = team.bookings.reduce(
-            (sum, b) => sum + (b.productionCost || 0),
-            0
-          );
+      
+
+
+const totalProductionCost = team.bookings.reduce(
+  (sum, b) => sum + (b.production || 0),
+  0
+);
+
+// 👇 Add this to get (winning - productionCost)
+const winningMinusProduction = totalWinning - totalProductionCost;
 
           const totalTeamAmount = totalEntryFee - totalWinning;
           const totalNetAmount =
@@ -305,7 +306,11 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                       <th style={{ padding: "10px", textAlign: "left" }}>
                         Description
                       </th>
-                   
+                            
+                   <th style={{ padding: "10px", textAlign: "left" }}>
+                     WIN GIVEN
+                      </th>
+               
                    <th style={{ padding: "10px", textAlign: "left" }}>
                         Booked by
                       </th>
@@ -385,6 +390,15 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                                 style={{ width: "100%" }}
                               />
                             </td>
+                                <td style={thTdStyleLeft}>
+                              <input
+                                type="text"
+                                name="production"
+                                value={bookingForm.production}
+                                onChange={handleChange}
+                                style={{ width: "100%" }}
+                              />
+                            </td>
                             <td style={thTdStyleLeft}>
                               <input
                                 type="text"
@@ -448,6 +462,7 @@ const monthProfit = getProfitForRange(oneMonthAgo, new Date());
                             Rs {Math.round(b.winning)}
                           </td>
                           <td style={thTdStyleLeft}>{b.discription}</td>
+                                     <td style={thTdStyleLeft}>{b.production}</td>
                           <td style={thTdStyleLeft}>{b.caster}</td>
                           <td style={{ textAlign: "center" }}>
                             <button
