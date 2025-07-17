@@ -61,11 +61,11 @@ const filteredTeams = teams
 
 
   .filter(Boolean)
-    .sort((a, b) => {
-      const totalA = a.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
-      const totalB = b.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
-      return totalB - totalA; // Descending order (highest first)
-    });
+   .sort((a, b) => {
+  const totalA = a.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
+  const totalB = b.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
+  return totalA - totalB; // Ascending order (lowest first)
+});
 
   const handleEditBookingClick = (teamName, booking, index) => {
     setEditingBooking({ teamName, index });
