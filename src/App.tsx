@@ -9,7 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute.tsx";
 
 // Logout button component
 const LogoutButton: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) return null;
 

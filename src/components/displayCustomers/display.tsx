@@ -57,14 +57,14 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     if (!dateStr) return new Date(0);
     
     // Try DD/MM/YYYY format
-    const dmyPattern = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+    const dmyPattern = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
     const dmyMatch = dateStr.match(dmyPattern);
     if (dmyMatch) {
       return new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
     }
     
     // Try YYYY-MM-DD format
-    const ymdPattern = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+    const ymdPattern = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
     const ymdMatch = dateStr.match(ymdPattern);
     if (ymdMatch) {
       return new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]));
@@ -76,6 +76,7 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
   };
 
   // Get today's date string for comparison
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getTodayString = (): string => {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, '0');
@@ -323,12 +324,13 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
   };
 
   // Get filtered bookings for PDF export
-  const getPdfBookings = (team: Team): Booking[] => {
-    if (!pdfExport || pdfExport.teamName !== team.teamName) {
-      return team.bookings;
-    }
-    return filterBookingsByDateRange(team.bookings, pdfExport.startDate, pdfExport.endDate);
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // const getPdfBookings = (team: Team): Booking[] => {
+  //   if (!pdfExport || pdfExport.teamName !== team.teamName) {
+  //     return team.bookings;
+  //   }
+  //   return filterBookingsByDateRange(team.bookings, pdfExport.startDate, pdfExport.endDate);
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black px-4 md:px-8 py-8">
@@ -543,12 +545,9 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                const teamProfit = totalEntryFee - totalWinning;
               
               // Get PDF bookings if this team is being exported
-              const pdfBookings = pdfExport?.teamName === team.teamName 
-                ? getPdfBookings(team) 
-                : team.bookings;
-              const pdfTotalEntryFee = pdfBookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
-              const pdfTotalWinning = pdfBookings.reduce((sum, b) => sum + (b.winning || 0), 0);
-              const pdfTeamProfit = pdfTotalEntryFee - pdfTotalWinning;
+  // const pdfBookings = pdfExport?.teamName === team.teamName 
+  //   ? getPdfBookings(team) 
+  //   : team.bookings;
 
               return (
                 <motion.div
