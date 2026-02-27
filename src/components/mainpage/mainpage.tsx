@@ -281,8 +281,8 @@ const MainPage: React.FC = () => {
             <span className="text-white font-semibold">Finance Tracker Pro</span>
           </div>
           <p className="text-gray-500 text-sm">
-            © 2024 Finance Tracker Pro. All rights reserved.
-          </p>
+            © 2026 Finance Tracker Pro. All rights reserved by Fusion esports.
+          </p> 
         </div>
       </motion.footer>
     </div>
