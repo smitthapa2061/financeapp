@@ -5,6 +5,7 @@ import "./App.css";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Home from "./components/home/home.tsx";
 import Login from "./components/Login/Login.tsx";
+import MainPage from "./components/mainpage/mainpage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute.tsx";
 
 // Logout button component
@@ -23,9 +24,9 @@ const LogoutButton: React.FC = () => {
 function AppContent() {
   return (
     <>
-      <LogoutButton />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/" element={<MainPage />} />
         <Route
           path="/"
           element={
@@ -34,7 +35,7 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/main" replace />} />
       </Routes>
     </>
   );
