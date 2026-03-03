@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, useMemo, useRef } from "react";
 import { Team, Booking } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
+import { formatDisplayDate, formatDisplayDateCompact, parseDate } from "../../utils/date";
 
 interface DisplayBookingsProps {
   teams: Team[];
@@ -650,7 +651,7 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                          <tbody>
                            {filterBookingsByDateRange(team.bookings, pdfExport.startDate, pdfExport.endDate).map((b, index) => (
                              <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                               <td className="border border-gray-300 px-4 py-2 text-gray-900">{b.date}</td>
+                               <td className="border border-gray-300 px-4 py-2 text-gray-900">{formatDisplayDateCompact(b.date)}</td>
                                <td className="border border-gray-300 px-4 py-2 text-gray-900">{b.time}</td>
                                <td className="border border-gray-300 px-4 py-2 text-gray-900">{b.server}</td>
                                <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Rs {Math.round(b.entryFee || 0)}</td>
@@ -811,7 +812,7 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                                   transition={{ delay: index * 0.03 }}
                                   className={`border-b border-gray-700/30 hover:bg-white/5 transition-colors ${index % 2 === 0 ? 'bg-black/20' : 'bg-transparent'}`}
                                 >
-                                  <td className="px-4 py-3 text-white">{b.date}</td>
+                                  <td className="px-4 py-3 text-white">{formatDisplayDateCompact(b.date)}</td>
                                   <td className="px-4 py-3 text-white">{b.time}</td>
                                   <td className="px-4 py-3 text-white">{b.server}</td>
                                   <td className="px-4 py-3 text-right text-white font-medium">Rs {Math.round(b.entryFee)}</td>
