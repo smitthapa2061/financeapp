@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         setPassword("");
         setConfirmPassword("");
         setAdminAuthCode("");
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (error) {
       setMessage("An unexpected error occurred");
