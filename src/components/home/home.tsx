@@ -11,6 +11,7 @@ const TeamSelector: React.FC = () => {
   const [newTeamName, setNewTeamName] = useState<string>("");
   const [showAll, setShowAll] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [booking, setBooking] = useState<Booking>({
     customerName: "",
     date: "",
@@ -300,10 +301,18 @@ const TeamSelector: React.FC = () => {
                   <div className="flex gap-3">
                     <input
                       type="text"
-                      placeholder="Enter team name..."
+                      placeholder="Enter team name or search..."
                       className="flex-1 bg-black/50 border-2 border-gray-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-red-500 transition-all duration-300 placeholder-gray-500"
                       value={newTeamName}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setNewTeamName(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        setNewTeamName(e.target.value);
+                        setSearchTerm(e.target.value);
+                      }}
+                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === 'Enter') {
+                          handleAddTeam();
+                        }
+                      }}
                     />
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -330,8 +339,18 @@ const TeamSelector: React.FC = () => {
                   {teams.length === 0 ? (
                     <p className="text-gray-400 text-center py-4">No teams available. Create a team first.</p>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                      {teams.map(({ teamName, _id }) => (
+                    <>
+                    {searchTerm && (
+                      <p className="text-gray-400 text-sm mb-3">
+                        Showing teams matching "{searchTerm}"
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 overflow-y-auto max-h-64">
+                      {teams
+                        .filter(team => 
+                          team.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+                        )
+                        .map(({ teamName, _id }) => (
                         <motion.div
                           key={_id}
                           whileHover={{ scale: 1.02 }}
@@ -355,6 +374,12 @@ const TeamSelector: React.FC = () => {
                         </motion.div>
                       ))}
                     </div>
+                    {searchTerm && teams.filter(team => team.teamName.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                      <p className="text-gray-400 text-center py-3 text-sm">
+                        No teams found matching "{searchTerm}". Press Add to create a new team.
+                      </p>
+                    )}
+                    </>
                   )}
                 </motion.div>
               </div>
