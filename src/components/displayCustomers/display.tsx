@@ -734,6 +734,20 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                              </td>
                              <td className="border border-gray-300 px-4 py-2"></td>
                            </tr>
+                           <tr className="bg-gray-200 font-bold">
+                             <td colSpan={5} className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                               {(() => {
+                                 const net = Math.round(filterBookingsByDateRange(team.bookings, pdfExport.startDate, pdfExport.endDate).reduce((sum, b) => sum + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0));
+                                 return net < 0 ? "Winning Pending" : "Entry Pending";
+                               })()}
+                             </td>
+                             <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                               Rs {(() => {
+                                 const net = Math.round(filterBookingsByDateRange(team.bookings, pdfExport.startDate, pdfExport.endDate).reduce((sum, b) => sum + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0));
+                                 return Math.abs(net);
+                               })()}
+                             </td>
+                           </tr>
                          </tfoot>
                        </table>
                        {(qr1 || qr2 || qr3 || qr4) && (
@@ -985,6 +999,20 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                       </td>
                       <td className="border border-gray-300 px-4 py-2"></td>
                     </tr>
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={5} className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                        {(() => {
+                          const net = Math.round(team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0));
+                          return net < 0 ? "Winning Pending" : "Entry Pending";
+                        })()}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                        Rs {(() => {
+                          const net = Math.round(team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0));
+                          return Math.abs(net);
+                        })()}
+                      </td>
+                    </tr>
                   </tfoot>
                 </table>
               </div>
@@ -1007,9 +1035,17 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                     </td>
                   </tr>
                   <tr className="bg-gray-100 font-bold">
-                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Net Profit:</td>
                     <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
-                      Rs {Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0), 0))}
+                      {(() => {
+                        const net = Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0), 0));
+                        return net < 0 ? "Winning Pending:" : "Entry Pending Remaining:";
+                      })()}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                      Rs {(() => {
+                        const net = Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0), 0));
+                        return Math.abs(net);
+                      })()}
                     </td>
                   </tr>
                 </tbody>
