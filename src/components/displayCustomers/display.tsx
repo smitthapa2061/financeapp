@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, useMemo, useRef, useEffect } from "react";
+import React, { useState, ChangeEvent, useMemo, useRef, useEffect, useCallback } from "react";
 import { Team, Booking } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
@@ -226,6 +226,25 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     };
   }, [teamsWithParsedDates, debouncedSearch, filterDate, sortOption]);
 
+  // Handle mass export
+  const handleMassExport = useCallback(async (): Promise<void> => {
+    if (!massPrintRef.current) return;
+
+    try {
+      const canvas = await html2canvas(massPrintRef.current, {
+        background: '#ffffff',
+        useCORS: true,
+      });
+      const link = document.createElement('a');
+      link.download = `mass_export_${searchTerm}_${new Date().toISOString().split('T')[0]}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+      setMassExport(false);
+    } catch (error) {
+      console.error('Error generating mass export:', error);
+    }
+  }, [searchTerm, setMassExport]);
+
   // Trigger mass export when massExport is set
   useEffect(() => {
     if (massExport) {
@@ -234,7 +253,7 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
         handleMassExport();
       }, 1000);
     }
-  }, [massExport]);
+  }, [massExport, handleMassExport]);
 
   if (!teams) return <p>Loading teams...</p>;
 
@@ -341,24 +360,6 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     });
   };
 
-  // Handle mass export
-  const handleMassExport = async (): Promise<void> => {
-    if (!massPrintRef.current) return;
-
-    try {
-      const canvas = await html2canvas(massPrintRef.current, {
-        background: '#ffffff',
-        useCORS: true,
-      });
-      const link = document.createElement('a');
-      link.download = `mass_export_${searchTerm}_${new Date().toISOString().split('T')[0]}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
-      setMassExport(false);
-    } catch (error) {
-      console.error('Error generating mass export:', error);
-    }
-  };
 
   // Get filtered bookings for PDF export
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
