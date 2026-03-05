@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, useMemo, useRef } from "react";
+import React, { useState, ChangeEvent, useMemo, useRef, useEffect } from "react";
 import { Team, Booking } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
@@ -19,6 +19,20 @@ interface EditingBooking {
 
 interface BookingForm extends Booking {}
 
+interface PreprocessedBooking extends Booking {
+  _parsedDate: Date;
+  _dateLower: string;
+  _casterLower: string;
+}
+
+interface PreprocessedTeam extends Omit<Team, 'bookings'> {
+  bookings: PreprocessedBooking[];
+}
+
+interface TeamWithSearchString extends Team {
+  _searchString: string;
+}
+
 interface PdfExportState {
   teamName: string;
   startDate: string;
@@ -34,6 +48,7 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
   onDeleteTeam,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const [editingBooking, setEditingBooking] = useState<EditingBooking | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>("default");
   const [filterDate, setFilterDate] = useState<string>("");
@@ -53,28 +68,38 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     paid: false,
   });
 
-  // Helper function to parse date from various formats
-  const parseDate = (dateStr: string): Date => {
-    if (!dateStr) return new Date(0);
-    
-    // Try DD/MM/YYYY format
-    const dmyPattern = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/;
-    const dmyMatch = dateStr.match(dmyPattern);
-    if (dmyMatch) {
-      return new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
-    }
-    
-    // Try YYYY-MM-DD format
-    const ymdPattern = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/;
-    const ymdMatch = dateStr.match(ymdPattern);
-    if (ymdMatch) {
-      return new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]));
-    }
-    
-    // Default parse
-    const parsed = new Date(dateStr);
-    return isNaN(parsed.getTime()) ? new Date(0) : parsed;
-  };
+  // Debounce search term to improve performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Preprocess teams once: parse all booking dates
+  const teamsWithParsedDates = useMemo(() => {
+    return teams.map(team => ({
+      ...team,
+      _searchString: [
+        team.teamName?.toLowerCase() || "",
+        ...team.bookings.flatMap(b => [
+          b.date?.toLowerCase() || "",
+          b.time?.toLowerCase() || "",
+          b.server?.toLowerCase() || "",
+          b.discription?.toLowerCase() || "",
+          b.caster?.toLowerCase() || "",
+          b.production?.toLowerCase() || "",
+        ])
+      ].join(" "),
+      bookings: team.bookings.map(b => ({
+        ...b,
+        _parsedDate: parseDate(b.date), // store parsed date once
+        _dateLower: b.date?.toLowerCase() || "",
+        _casterLower: b.caster?.toLowerCase() || "",
+      })),
+    }));
+  }, [teams]);
 
   // Get today's date string for comparison
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -86,115 +111,67 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     return `${day}/${month}/${year}`;
   };
 
-  // Calculate profit statistics
-  const profitStats = useMemo(() => {
+  // Compute filtered teams AND profit stats in one go
+  const { filteredTeams, profitStats } = useMemo(() => {
+    const lowerSearch = debouncedSearch.toLowerCase();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     const monthAgo = new Date(today);
     monthAgo.setMonth(monthAgo.getMonth() - 1);
 
+    let totalEntryFee = 0;
+    let totalWinning = 0;
+    let totalBookings = 0;
     let todayProfit = 0;
     let yesterdayProfit = 0;
     let weeklyProfit = 0;
     let monthlyProfit = 0;
-    let totalEntryFee = 0;
-    let totalWinning = 0;
-    let totalBookings = 0;
 
-    teams.forEach((team) => {
-      team.bookings.forEach((booking) => {
-        const bookingDate = parseDate(booking.date);
-        // Only count entry fee if not paid (paid = true means fee was paid, so don't count it)
-        const entryFeeToCount = booking.paid ? 0 : (booking.entryFee || 0);
-        const profit = entryFeeToCount - (booking.winning || 0);
-        
+    const filtered: PreprocessedTeam[] = [];
+
+    teamsWithParsedDates.forEach(team => {
+      // Instant search using precomputed string
+      const matchesSearch = team._searchString.includes(lowerSearch);
+
+      const filteredBookings = team.bookings.filter(b => {
+        // Filter by date input if provided
+        const matchesDate = filterDate
+          ? b._parsedDate.toDateString() === parseDate(filterDate).toDateString()
+          : true;
+
+        return matchesDate && (matchesSearch || lowerSearch === "");
+      });
+
+      // Calculate profit stats here
+      filteredBookings.forEach(b => {
+        const entryFeeToCount = b.paid ? 0 : (b.entryFee || 0);
+        const profit = entryFeeToCount - (b.winning || 0);
+
         totalEntryFee += entryFeeToCount;
-        totalWinning += booking.winning || 0;
+        totalWinning += b.winning || 0;
         totalBookings++;
 
-        // Today's profit
-        if (bookingDate.toDateString() === today.toDateString()) {
-          todayProfit += profit;
-        }
-        
-        // Yesterday's profit
-        if (bookingDate.toDateString() === yesterday.toDateString()) {
-          yesterdayProfit += profit;
-        }
-        
-        // Weekly profit
-        if (bookingDate >= weekAgo) {
-          weeklyProfit += profit;
-        }
-        
-        // Monthly profit
-        if (bookingDate >= monthAgo) {
-          monthlyProfit += profit;
-        }
+        const bDate = b._parsedDate;
+        if (bDate.toDateString() === today.toDateString()) todayProfit += profit;
+        if (bDate.toDateString() === yesterday.toDateString()) yesterdayProfit += profit;
+        if (bDate >= weekAgo) weeklyProfit += profit;
+        if (bDate >= monthAgo) monthlyProfit += profit;
       });
+
+      if (filteredBookings.length > 0 || matchesSearch) {
+        filtered.push({ ...team, bookings: filteredBookings });
+      }
     });
 
-    return {
-      todayProfit,
-      yesterdayProfit,
-      weeklyProfit,
-      monthlyProfit,
-      totalEntryFee,
-      totalWinning,
-      totalProfit: totalEntryFee - totalWinning,
-      totalBookings,
-    };
-  }, [teams]);
-
-  if (!teams) return <p>Loading teams...</p>;
-
-  // Filter and sort teams
-  const filteredTeams = teams
-    .map((team) => {
-      const lowerSearch = searchTerm.toLowerCase();
-      const teamNameSafe = team.teamName?.toLowerCase() || "";
-      const matchTeamName = teamNameSafe.includes(lowerSearch);
-
-      // Filter bookings by date if filterDate is set
-      let filteredBookings = Array.isArray(team.bookings) ? team.bookings : [];
-      
-      if (filterDate) {
-        filteredBookings = filteredBookings.filter((b) => {
-          if (!b || !b.date) return false;
-          const bookingDate = parseDate(b.date);
-          const filterDateObj = parseDate(filterDate);
-          return bookingDate.toDateString() === filterDateObj.toDateString();
-        });
-      }
-
-      // Filter by search term
-      const matchedBookings = filteredBookings.filter((b) => {
-        if (!b) return false;
-        const dateSafe = b.date ? String(b.date).toLowerCase() : "";
-        const casterSafe = b.caster ? String(b.caster).toLowerCase() : "";
-        return dateSafe.includes(lowerSearch) || casterSafe.includes(lowerSearch);
-      });
-
-      const matchCaster = matchedBookings.length > 0;
-
-      if (matchTeamName || matchCaster || searchTerm === "") {
-        return {
-          ...team,
-          bookings: filterDate ? filteredBookings : team.bookings,
-        };
-      }
-
-      return null;
-    })
-    .filter((team): team is Team => team !== null)
-    .sort((a, b) => {
+    // Sorting
+    const sorted = filtered.sort((a, b) => {
       switch (sortOption) {
         case "entryFeeHigh": {
           const totalA = a.bookings.reduce((sum, b) => sum + (b.entryFee || 0), 0);
@@ -207,19 +184,36 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
           return totalA - totalB;
         }
         case "dateNewest": {
-          const dateA = a.bookings.length > 0 ? parseDate(a.bookings[a.bookings.length - 1].date).getTime() : 0;
-          const dateB = b.bookings.length > 0 ? parseDate(b.bookings[b.bookings.length - 1].date).getTime() : 0;
+          const dateA = a.bookings.length > 0 ? a.bookings[a.bookings.length - 1]._parsedDate.getTime() : 0;
+          const dateB = b.bookings.length > 0 ? b.bookings[b.bookings.length - 1]._parsedDate.getTime() : 0;
           return dateB - dateA;
         }
         case "dateOldest": {
-          const dateA = a.bookings.length > 0 ? parseDate(a.bookings[0].date).getTime() : Infinity;
-          const dateB = b.bookings.length > 0 ? parseDate(b.bookings[0].date).getTime() : Infinity;
+          const dateA = a.bookings.length > 0 ? a.bookings[0]._parsedDate.getTime() : Infinity;
+          const dateB = b.bookings.length > 0 ? b.bookings[0]._parsedDate.getTime() : Infinity;
           return dateA - dateB;
         }
         default:
           return 0;
       }
     });
+
+    return {
+      filteredTeams: sorted,
+      profitStats: {
+        todayProfit,
+        yesterdayProfit,
+        weeklyProfit,
+        monthlyProfit,
+        totalEntryFee,
+        totalWinning,
+        totalProfit: totalEntryFee - totalWinning,
+        totalBookings,
+      },
+    };
+  }, [teamsWithParsedDates, debouncedSearch, filterDate, sortOption]);
+
+  if (!teams) return <p>Loading teams...</p>;
 
   const handleEditBookingClick = (teamName: string, booking: Booking, index: number): void => {
     setEditingBooking({ teamName, index });
