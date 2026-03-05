@@ -2,7 +2,7 @@ import React, { useState, ChangeEvent, useMemo, useRef, useEffect } from "react"
 import { Team, Booking } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
-import { formatDisplayDate, formatDisplayDateCompact, parseDate } from "../../utils/date";
+import { formatDisplayDateCompact, parseDate } from "../../utils/date";
 
 interface DisplayBookingsProps {
   teams: Team[];
@@ -27,10 +27,6 @@ interface PreprocessedBooking extends Booking {
 
 interface PreprocessedTeam extends Omit<Team, 'bookings'> {
   bookings: PreprocessedBooking[];
-}
-
-interface TeamWithSearchString extends Team {
-  _searchString: string;
 }
 
 interface PdfExportState {
