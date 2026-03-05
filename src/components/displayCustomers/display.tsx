@@ -3,6 +3,7 @@ import { Team, Booking } from "../../api";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from "html2canvas";
 import { formatDisplayDateCompact, parseDate } from "../../utils/date";
+import axios from "axios";
 
 interface DisplayBookingsProps {
   teams: Team[];
@@ -63,6 +64,22 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     productionCost: 0,
     paid: false,
   });
+  const [qr1, setQr1] = useState<string | null>(null);
+  const [qr2, setQr2] = useState<string | null>(null);
+  const [qr3, setQr3] = useState<string | null>(null);
+  const [qr4, setQr4] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [massExport, setMassExport] = useState(false);
+  const massPrintRef = useRef<HTMLDivElement>(null);
+
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'react_upload');
+    const response = await axios.post(`https://api.cloudinary.com/v1_1/dj181g1it/image/upload`, formData);
+    const publicId = response.data.public_id;
+    return `https://res.cloudinary.com/dj181g1it/image/upload/w_600,h_600,c_fill,f_avif/${publicId}.avif`;
+  };
 
   // Debounce search term to improve performance
   useEffect(() => {
@@ -209,6 +226,16 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
     };
   }, [teamsWithParsedDates, debouncedSearch, filterDate, sortOption]);
 
+  // Trigger mass export when massExport is set
+  useEffect(() => {
+    if (massExport) {
+      // Use timeout to ensure the div is rendered and images loaded
+      setTimeout(() => {
+        handleMassExport();
+      }, 1000);
+    }
+  }, [massExport]);
+
   if (!teams) return <p>Loading teams...</p>;
 
   const handleEditBookingClick = (teamName: string, booking: Booking, index: number): void => {
@@ -290,28 +317,47 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
   const handleExportPdfClick = (teamName: string): void => {
     const team = teams.find(t => t.teamName === teamName);
     if (!team) return;
-    
+
     // Get the date range from existing bookings
     const dates = team.bookings
       .map(b => parseDate(b.date))
       .filter(d => d.getTime() > 0)
       .sort((a, b) => a.getTime() - b.getTime());
-    
+
     const minDate = dates.length > 0 ? dates[0] : new Date();
     const maxDate = dates.length > 0 ? dates[dates.length - 1] : new Date();
-    
+
     const formatDateForInput = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-    
+
     setPdfExport({
       teamName,
       startDate: formatDateForInput(minDate),
       endDate: formatDateForInput(maxDate),
     });
+  };
+
+  // Handle mass export
+  const handleMassExport = async (): Promise<void> => {
+    if (!massPrintRef.current) return;
+
+    try {
+      const canvas = await html2canvas(massPrintRef.current, {
+        background: '#ffffff',
+        useCORS: true,
+      });
+      const link = document.createElement('a');
+      link.download = `mass_export_${searchTerm}_${new Date().toISOString().split('T')[0]}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+      setMassExport(false);
+    } catch (error) {
+      console.error('Error generating mass export:', error);
+    }
   };
 
   // Get filtered bookings for PDF export
@@ -333,10 +379,20 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
       >
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0 flex items-center">
-            <span className="w-3 h-12 bg-gradient-to-b from-red-500 to-red-700 mr-4 rounded-full print:hidden"></span>
-            Finance Dashboard
-          </h2>
+          <div className="flex items-center mb-4 md:mb-0">
+            <h2 className="text-3xl md:text-4xl font-bold text-white flex items-center">
+              <span className="w-3 h-12 bg-gradient-to-b from-red-500 to-red-700 mr-4 rounded-full print:hidden"></span>
+              Finance Dashboard
+            </h2>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowQrModal(true)}
+              className="ml-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300"
+            >
+              Upload QR Codes
+            </motion.button>
+          </div>
           <div className="text-gray-400 text-sm">
             Last updated: {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
@@ -513,6 +569,18 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
           </div>
         </motion.div>
 
+        {/* Mass Export Button */}
+        {filteredTeams.length > 0 && searchTerm && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setMassExport(true)}
+            className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Mass Export
+          </motion.button>
+        )}
+
         {/* Teams List */}
         <AnimatePresence>
           {filteredTeams.length === 0 ? (
@@ -667,6 +735,14 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
                            </tr>
                          </tfoot>
                        </table>
+                       {(qr1 || qr2 || qr3 || qr4) && (
+                         <div style={{ marginTop: '20px', display: 'flex', gap: '0', justifyContent: 'center' }}>
+                           {qr1 && <img src={qr1} alt="QR1" style={{ width: '200px', height: '200px' }} />}
+                           {qr2 && <img src={qr2} alt="QR2" style={{ width: '200px', height: '200px' }} />}
+                           {qr3 && <img src={qr3} alt="QR3" style={{ width: '200px', height: '200px' }} />}
+                           {qr4 && <img src={qr4} alt="QR4" style={{ width: '200px', height: '200px' }} />}
+                         </div>
+                       )}
                     </div>
                   )}
                   
@@ -857,6 +933,184 @@ const DisplayBookings: React.FC<DisplayBookingsProps> = ({
             })
           )}
         </AnimatePresence>
+
+        {/* Mass Export Hidden Div */}
+        {massExport && (
+          <div
+            ref={massPrintRef}
+            className="fixed left-[-9999px] top-0 bg-white p-6"
+            style={{ width: '1200px' }}
+          >
+            <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Mass Export - {searchTerm}</h1>
+
+            {filteredTeams.map(team => (
+              <div key={team.teamName} className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">{team.teamName}</h2>
+                <table className="w-full border-collapse mb-4">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700">Date</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700">Time</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700">Server</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-700">Entry Fee</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-700">Winning</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center font-semibold text-gray-700">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.bookings.map((b, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="border border-gray-300 px-4 py-2 text-gray-900">{formatDisplayDateCompact(b.date)}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-gray-900">{b.time}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-gray-900">{b.server}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Rs {Math.round(b.entryFee || 0)}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Rs {Math.round(b.winning || 0)}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center text-gray-900">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${b.paid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {b.paid ? 'Paid' : 'Unpaid'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-200 font-bold">
+                      <td colSpan={3} className="border border-gray-300 px-4 py-2 text-right text-gray-900">{team.teamName} Totals:</td>
+                      <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                        Rs {Math.round(team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)), 0))}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                        Rs {Math.round(team.bookings.reduce((s, b) => s + (b.winning || 0), 0))}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ))}
+
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Overall Totals</h2>
+              <table className="w-full border-collapse">
+                <tbody>
+                  <tr className="bg-gray-100 font-bold">
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Total Entry Fee:</td>
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                      Rs {Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)), 0), 0))}
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-100 font-bold">
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Total Winning:</td>
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                      Rs {Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.winning || 0), 0), 0))}
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-100 font-bold">
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">Net Profit:</td>
+                    <td className="border border-gray-300 px-4 py-2 text-right text-gray-900">
+                      Rs {Math.round(filteredTeams.reduce((sum, team) => sum + team.bookings.reduce((s, b) => s + (b.paid ? 0 : (b.entryFee || 0)) - (b.winning || 0), 0), 0))}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {(qr1 || qr2 || qr3 || qr4) && (
+              <div style={{ marginTop: '20px', display: 'flex', gap: '0', justifyContent: 'center' }}>
+                {qr1 && <img src={qr1} alt="QR1" style={{ width: '200px', height: '200px' }} />}
+                {qr2 && <img src={qr2} alt="QR2" style={{ width: '200px', height: '200px' }} />}
+                {qr3 && <img src={qr3} alt="QR3" style={{ width: '200px', height: '200px' }} />}
+                {qr4 && <img src={qr4} alt="QR4" style={{ width: '200px', height: '200px' }} />}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* QR Upload Modal */}
+        {showQrModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+              <h3 className="text-white text-lg font-semibold mb-4">Upload QR Codes</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">QR1</label>
+                  <label className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 cursor-pointer inline-block text-center">
+                    Upload QR1
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = await uploadToCloudinary(e.target.files[0]);
+                          setQr1(url);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {qr1 && <img src={qr1} alt="QR1" className="mt-2 w-20 h-20" />}
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">QR2</label>
+                  <label className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 cursor-pointer inline-block text-center">
+                    Upload QR2
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = await uploadToCloudinary(e.target.files[0]);
+                          setQr2(url);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {qr2 && <img src={qr2} alt="QR2" className="mt-2 w-20 h-20" />}
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">QR3</label>
+                  <label className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 cursor-pointer inline-block text-center">
+                    Upload QR3
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = await uploadToCloudinary(e.target.files[0]);
+                          setQr3(url);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {qr3 && <img src={qr3} alt="QR3" className="mt-2 w-20 h-20" />}
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">QR4</label>
+                  <label className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 cursor-pointer inline-block text-center">
+                    Upload QR4
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const url = await uploadToCloudinary(e.target.files[0]);
+                          setQr4(url);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {qr4 && <img src={qr4} alt="QR4" className="mt-2 w-20 h-20" />}
+                </div>
+              </div>
+              <div className="flex justify-end mt-4">
+                <button onClick={() => setShowQrModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
